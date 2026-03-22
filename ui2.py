@@ -17,7 +17,17 @@ print(f"Jugadore ... {jugadores}")
 
 pygame.init()
 
-icon = pygame.image.load("assets/icon.png")  # Reemplaza con la ruta correcta a tu imagen
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta para recursos, compatible con dev y PyInstaller """
+    try:
+        # PyInstaller crea una carpeta temporal y guarda la ruta en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
+
+icon = pygame.image.load(resource_path("assets/icon.png"))  # Reemplaza con la ruta correcta a tu imagen
 pygame.display.set_icon(icon)
 screen = pygame.display.set_mode((800, 600))
 pygame.display.set_caption("RUMMY 500")
@@ -31,7 +41,7 @@ screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
 pygame.display.set_caption("Rummy 500 - Layout Base")
 
 # Cargar fondo
-ASSETS_PATH = os.path.join(os.path.dirname(__file__), "assets")
+ASSETS_PATH = resource_path(os.path.join(os.path.dirname(__file__), "assets"))
 fondo_path = os.path.join(ASSETS_PATH, "fondo_juego.png")
 fondo_img = pygame.image.load(fondo_path).convert()
 fondo_img = pygame.transform.scale(fondo_img, (WIDTH, HEIGHT))
@@ -1314,7 +1324,7 @@ def main(manager_de_red): # <-- Acepta el manager de red
     roundFour = False
 
     pygame.mixer.init()
-    inicio_sound_path = os.path.join(os.path.dirname(__file__), "assets", "sonido", "inicio.wav")
+    inicio_sound_path = resource_path(os.path.join(os.path.dirname(__file__), "assets", "sonido", "inicio.wav"))
     inicio_sound = pygame.mixer.Sound(inicio_sound_path)
     inicio_sound.play()
 
@@ -4043,54 +4053,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                 screen.blit(img, comprar_rect.topleft)
             cuadros_interactivos["Comprar carta"] = comprar_rect
 
-        # Intercambiar SÓLO las zonas interactivas: "Descarte" <-> "ZonaCentralInteractiva".
-        # Esto cambia solo el mapeo interactivo (donde se debe soltar una carta), no afecta el dibujo.
-        '''try:
-            if "Descarte" in cuadros_interactivos and "ZonaCentralInteractiva" in cuadros_interactivos:
-                # Hacer swap de referencias
-                d_rect = cuadros_interactivos["Descarte"]
-                z_rect = cuadros_interactivos["ZonaCentralInteractiva"]
-                cuadros_interactivos["Descarte"], cuadros_interactivos["ZonaCentralInteractiva"] = z_rect, d_rect
-
-                # Detectar maximizado (comparando con resolución de escritorio)
-                is_max = False
-                try:
-                    window_w, window_h = screen.get_size()
-                    info = pygame.display.Info()
-                    desktop_w, desktop_h = info.current_w, info.current_h
-                    # margen ligero para evitar falsos negativos en multi-monitor
-                    is_max = (window_w >= desktop_w - 20 and window_h >= desktop_h - 40)
-                except Exception:
-                    is_max = False
-
-                # Si está maximizada, ajustar la posición X (hacia la derecha) + escalar ancho, tomando
-                # en cuenta la Y y las medidas del primer 'Trio' (x_trio, cuadro_y, cuadro_w_fino, cuadro_h)
-                if is_max:
-                    try:
-                        base_x = x_trio
-                        base_y = cuadro_y
-                        base_w = cuadro_w_fino
-                        base_h = cuadro_h
-                    except Exception:
-                        base_x = None
-                        base_y = None
-                        base_w = None
-                        base_h = None
-
-                    # Desplazamiento pequeño a la derecha y aumento de ancho proporcional
-                    delta = max(8, int((base_w or 100) * 0.08))
-
-                    for key in ("Descarte", "ZonaCentralInteractiva"):
-                        r = cuadros_interactivos.get(key)
-                        if isinstance(r, pygame.Rect):
-                            # mover X a la derecha y usar Y/alto del primer Trio
-                            new_x = min(window_w - 10, r.x + delta)
-                            new_y = base_y if base_y is not None else r.y
-                            new_w = max(40, r.width + delta)
-                            new_h = base_h if base_h is not None else r.height
-                            cuadros_interactivos[key] = pygame.Rect(new_x, new_y, new_w, new_h)
-        except Exception:
-            pass'''
 
         # --- Caja superior izquierda: Ronda y Turno (pegada arriba a la izquierda) ---
         ronda_turno_x = 0
@@ -4238,7 +4200,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                         # 2. Para saber QUIÉN es el dueño de esa zona (para clicks/drops)
                         baj_box_to_player[baj_name] = opponent
 
-        # Dibuja solo los jugadores activos en los recuadros correspondientes
         # Dibuja solo los jugadores activos en los recuadros correspondientes
         for jugador, recuadro in jugadores_laterales:
             draw_horizontal_rain_hand_rotated(jugador, recuadro)
@@ -4424,67 +4385,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
             restore_region(puntos_rect, 10, 8)
             draw_text_with_border(screen, puntos_txt, font_puntos_used, puntos_rect.topleft,
                                  (220,220,120), (0,0,0))
-        # Dibuja cartas en Seguidilla (zona_cartas[0])
-        '''if zona_cartas[0]:
-            rect = cuadros_interactivos.get("Seguidilla")
-            if rect:
-                n = len(zona_cartas[0])
-                pad = 0
-                # Queremos la carta lo más grande posible: priorizamos altura
-                card_height = rect.height - pad
-                card_width = int(card_height * 0.68)
-                # Si la carta resulta más ancha que el rect, ajustar por ancho
-                if card_width > rect.width - pad:
-                    card_width = rect.width - pad
-                    card_height = int(card_width / 0.68)
-                # Capamos la altura de la carta para que no ocupe demasiado del rect
-                max_card_h = max(40, int(rect.height * 0.90))
-                if card_height > max_card_h:
-                    card_height = max_card_h
-                    card_width = max(40, int(card_height * 0.68))
-                # Rediseño de solapamiento: repartir espacio vertical para que ninguna carta quede totalmente oculta
-                if n > 1:
-                    available = max(0, rect.height - card_height)
-                    if available >= (n - 1) * card_height:
-                        overlap_y = card_height  # totalmente separadas
-                    else:
-                        # reducir margen cuando n aumenta; mínimo visible definido por MIN_OVERLAP
-                        overlap_y = max(MIN_OVERLAP, available // max(1, n - 1))
-                    overlap_y = min(overlap_y, card_height)
-                else:
-                    overlap_y = 0
-                x = rect.x + (rect.width - card_width) // 2
-                # Centrar la pila verticalmente dentro del rect
-                total_stack_h = card_height + (n - 1) * overlap_y
-                start_y = rect.y + max(4, (rect.height - total_stack_h) // 2)
-                # Dibujar todas las cartas (desde la primera abajo a la última encima)
-                for i in range(n):
-                    card = zona_cartas[0][i]
-                    img = get_card_image(card)
-                    img = pygame.transform.smoothscale(img, (card_width, card_height))
-                    card_rect = pygame.Rect(x, start_y + i * overlap_y, card_width, card_height)
-                    screen.blit(img, card_rect.topleft)'''
-
-        # Dibuja cartas en Trio (zona_cartas[1]) ##### Prueba no se para ver que pasa 
-        '''if zona_cartas[1] and roundOne:
-            rect = cuadros_interactivos.get("Trio")
-            if rect:
-                n = len(zona_cartas[1])
-                card_width, card_height = calc_card_size_for_rect(rect)
-                if n > 1:
-                    max_height = rect.height - 8
-                    solapamiento = (max_height - card_height) // (n - 1)
-                    if solapamiento > card_height * 0.7:
-                        solapamiento = int(card_height * 0.7)
-                else:
-                    solapamiento = 0
-                x = rect.x + (rect.width - card_width) // 2
-                start_y = rect.y + max(6, int(rect.height * 0.08))
-                for i, card in enumerate(zona_cartas[1]):
-                    img = get_card_image(card)
-                    img = pygame.transform.smoothscale(img, (card_width, card_height))
-                    card_rect = pygame.Rect(x, start_y + i * solapamiento, card_width, card_height)
-                    screen.blit(img, card_rect.topleft)'''
 
         # --- DIBUJO DINÁMICO DE CARTAS EN LA MESA (REEMPLAZO) ---
         
@@ -4534,7 +4434,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                         img_scaled = pygame.transform.smoothscale(img, (card_w, card_h))
                         # Dibujamos con el nuevo overlap_y más amplio
                         screen.blit(img_scaled, (x, start_y + j * overlap_y))
-        # --- DIBUJO DEL DESCARTE (MÁS ESPACIADO) ---
         # --- DIBUJO DEL DESCARTE (MÁS ESPACIADO) ---
         idx_desc = 3 if (roundThree or roundFour) else 2
         rect_desc = cuadros_interactivos.get("Descarte")
@@ -4613,10 +4512,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                 surf.fill((255, 255, 255, 20))  # muy translúcido
                 screen.blit(surf, ov.topleft)
 
-        # for idx, nombre in enumerate(["Seguidilla", "Trio", "Descarte"]):
-        #     if zona_cartas[idx]:
-        #         rect = cuadros_interactivos.get(nombre)
-        #         if rect:
                 img = get_card_image(card)
                 img = pygame.transform.smoothscale(img, (card_width, card_height))
                 card_rect = pygame.Rect(x, y, card_width, card_height)
@@ -4655,27 +4550,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                 card_rect = pygame.Rect(x, y, card_width, card_height)
                 screen.blit(img, card_rect.topleft)
 
-        # for idx, nombre in enumerate(["Seguidilla", "Trio", "Descarte"]):
-        #     if zona_cartas[idx]:
-        #         rect = cuadros_interactivos.get(nombre)
-        #         if rect:
-        #             n = len(zona_cartas[idx])
-        #             card_width = rect.width - 8
-        #             card_height = int(card_width / 0.68)
-        #             if n > 1:
-        #                 solapamiento = (rect.height - card_height) // (n - 1)
-        #                 if solapamiento > card_height * 0.7:
-        #                     solapamiento = int(card_height * 0.7)
-        #             else:
-        #                 solapamiento = 0
-        #             x = rect.x + (rect.width - card_width) // 2
-        #             start_y = rect.y
-        #             for i in range(n):
-        #                 card = zona_cartas[idx][i]
-        #                 img = get_card_image(card)
-        #                 img = pygame.transform.smoothscale(img, (card_width, card_height))
-        #                 card_rect = pygame.Rect(x, start_y + i * solapamiento, card_width, card_height)
-        #                 screen.blit(img, card_rect.topleft)
 
         # Al final del while running, antes de pygame.display.flip(), agrega:
         # Mensaje temporal: blanco, más grande, wrap por palabra cada 35 caracteres y un poco más abajo
@@ -5123,14 +4997,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                     cursor_x += ancho_jugada + GAP_ENTRE_JUGADAS
         # Dibujar todas las jugadas usando el mapping construido
             #esta es una prueba para ver los punto de collion
-            '''for p_name, jugadas in rects_jugadas.items():
-                for j in jugadas:
-                    # Dibujamos el área sensible que definimos en el evento
-                    debug_rect = j["rect_total"].inflate(60, 60) 
-                    s = pygame.Surface((debug_rect.width, debug_rect.height), pygame.SRCALPHA)
-                    s.fill((255, 255, 0, 50)) # Amarillo transparente
-                    screen.blit(s, debug_rect.topleft)
-                    pygame.draw.rect(screen, (255, 255, 0), debug_rect, 1)'''
         for p in players:
             p_name = getattr(p, "playerName", None)
             baj_rect = player_baj_rect.get(p_name)
@@ -5171,17 +5037,6 @@ def main(manager_de_red): # <-- Acepta el manager de red
                 
                 #Cambiar aqui juego1 para ronda 1 y juego2 para ronda 2 para hacer test
                 fase = "ronda1"
-                #-------------------------
-
-
-                #Aquí voy a inicializar la ronda
-                #round = startRound(players, screen)[0]
-                #for c in round.discards:
-                #    mazo_descarte.append(c)
-                #deckForRound = [c for c in round.deck.cards if c!= round.discards]
-                #print(str(round.discards))
-
-                #mainGameLoop(screen, players, deck, mazo_descarte, nombre, zona_cartas)
                 pass
             continue
 
