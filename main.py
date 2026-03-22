@@ -3,6 +3,18 @@ import sys
 from ui import UIManager
 from network import NetworkManager
 from volumen import ControlVolumen
+import os
+
+
+def resource_path(relative_path):
+    """ Obtiene la ruta absoluta para recursos, compatible con dev y PyInstaller """
+    try:
+        # PyInstaller crea una carpeta temporal y guarda la ruta en _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 
 def main():
@@ -13,7 +25,7 @@ def main():
     ui_manager = UIManager(SCREEN_WIDTH, SCREEN_HEIGHT, network_manager)
 
     pygame.mixer.init()  
-    pygame.mixer.music.load("assets/sonido/musica_fondo.mp3")  
+    pygame.mixer.music.load(resource_path("assets/sonido/musica_fondo.mp3"))  
     pygame.mixer.music.play(-1)
     ctrl_volumen=ControlVolumen()
 
@@ -52,8 +64,7 @@ def main():
             running = False
         else:
             ui_manager.update()
-            ctrl_volumen.actualizar_y_dibujar()          
-            
+            ctrl_volumen.actualizar_y_dibujar()             
 
     pygame.quit()
     sys.exit()
